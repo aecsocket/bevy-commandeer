@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use crate::prelude::*;
+use crate as bevy_commander; // for derive
+use crate::*;
 use bevy::prelude::*;
 
 pub struct HelpCommandPlugin<S> {
@@ -20,17 +21,11 @@ impl<S: CommandSender> Plugin for HelpCommandPlugin<S> {
 }
 
 /// Displays information on registered commands
-#[derive(clap::Parser, Resource)]
+#[derive(clap::Parser, AppCommand)]
+#[command(name = "help")]
 struct HelpCommand {
     /// The command to get help information for
     query: Option<String>,
-}
-
-// todo
-impl AppCommand for HelpCommand {
-    fn name() -> &'static str {
-        "help"
-    }
 }
 
 fn help_command<S: CommandSender>(

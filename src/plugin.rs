@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, marker::PhantomData, sync::Arc};
 
-use crate::prelude::*;
+use crate::*;
 use bevy::{prelude::*, utils::HashMap};
 
 pub struct CommanderPlugin<S> {

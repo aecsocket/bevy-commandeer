@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 use bevy::{app::PluginGroupBuilder, prelude::*};
 
-use crate::prelude::*;
+use crate::*;
 
 pub struct InbuiltCommandPlugins<S> {
     marker: PhantomData<S>,

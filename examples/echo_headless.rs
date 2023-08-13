@@ -1,5 +1,5 @@
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_commander::prelude::*;
+use bevy_commander::*;
 
 pub enum Sender {
     Console,
@@ -33,16 +33,11 @@ fn main() {
 }
 
 /// Prints the provided message back to the sender
-#[derive(clap::Parser, Resource)]
+#[derive(clap::Parser, AppCommand)]
+#[command(name = "echo")]
 struct EchoCommand {
     /// The message to echo back
     message: String,
-}
-
-impl AppCommand for EchoCommand {
-    fn name() -> &'static str {
-        "echo"
-    }
 }
 
 fn echo_command(ctx: CommandContext<EchoCommand, Sender>) {
@@ -53,4 +48,5 @@ fn echo_command(ctx: CommandContext<EchoCommand, Sender>) {
 
 fn setup() {
     info!("Type `echo <message>` to echo a message back to the console");
+    info!("Or type `help` to see all registered commands");
 }

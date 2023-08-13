@@ -8,7 +8,7 @@ use bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell;
 use bevy::prelude::*;
 use clap::{CommandFactory, FromArgMatches};
 
-use crate::prelude::*;
+use crate::*;
 
 pub trait AppCommand: CommandFactory + FromArgMatches + Sized + Resource {
     fn name() -> &'static str;

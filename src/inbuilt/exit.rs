@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use crate::prelude::*;
+use crate as bevy_commander; // for derive
+use crate::*;
 use bevy::app::AppExit;
 use bevy::prelude::*;
 
@@ -21,15 +22,9 @@ impl<S: CommandSender> Plugin for ExitCommandPlugin<S> {
 }
 
 /// Immediately exits the application
-#[derive(clap::Parser, Resource)]
+#[derive(clap::Parser, AppCommand)]
+#[command(name = "exit")]
 struct ExitCommand;
-
-// todo
-impl AppCommand for ExitCommand {
-    fn name() -> &'static str {
-        "exit"
-    }
-}
 
 fn exit_command<S>(ctx: CommandContext<ExitCommand, S>, mut exit: EventWriter<AppExit>) {
     for (_, _) in ctx {

@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
-use crate::prelude::*;
+use crate::*;
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use rustyline::error::ReadlineError;
