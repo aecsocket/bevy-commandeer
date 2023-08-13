@@ -1,5 +1,5 @@
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_commander::*;
+use bevy_commandeer::*;
 
 pub enum Sender {
     Console,
@@ -23,8 +23,8 @@ fn main() {
     App::new()
         .add_plugins((MinimalPlugins, LogPlugin::default()))
         .add_plugins((
-            CommanderPlugin::<Sender>::new(),
-            CommanderReadlinePlugin::<Sender>::with_prompt(""),
+            CommandeerPlugin::<Sender>::new(),
+            CommandeerReadlinePlugin::<Sender>::with_prompt(""),
             InbuiltCommandPlugins::<Sender>::new(),
         ))
         .add_command::<EchoCommand, _>(echo_command)

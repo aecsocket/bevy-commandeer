@@ -14,7 +14,7 @@ pub fn derive_command(input: TokenStream) -> TokenStream {
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
     
     TokenStream::from(quote! {
-        impl #impl_generics bevy_commander::AppCommand for #name #type_generics #where_clause {
+        impl #impl_generics bevy_commandeer::AppCommand for #name #type_generics #where_clause {
             fn name() -> &'static str {
                 #name_string
             }
@@ -29,18 +29,19 @@ fn get_command_name(input: &DeriveInput) -> syn::LitStr {
         .attrs
         .iter()
         .find_map(|attr| {
-            if attr.path.is_ident("command") {
-                if let Ok(syn::Meta::List(list)) = attr.parse_meta() {
-                    return list.nested.iter().find_map(|meta| {
-                        if let syn::NestedMeta::Meta(syn::Meta::NameValue(nv)) = meta {
-                            Some(nv.lit.clone())
-                        } else {
-                            None
-                        }
-                    });
+            if !attr.path.is_ident("command") {
+                return None;
+            };
+            let Ok(syn::Meta::List(list)) = attr.parse_meta() else {
+                return None;
+            };
+            list.nested.iter().find_map(|meta| {
+                if let syn::NestedMeta::Meta(syn::Meta::NameValue(nv)) = meta {
+                    Some(nv.lit.clone())
+                } else {
+                    None
                 }
-            }
-            None
+            })
         })
         .map(|lit| {
             if let syn::Lit::Str(str) = lit {

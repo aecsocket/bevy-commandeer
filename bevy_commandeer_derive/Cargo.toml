@@ -1,11 +1,11 @@
 [package]
-name = "bevy_commander_derive"
+name = "bevy_commandeer_derive"
 version = "0.1.0"
 edition = "2021"
 authors = ["aecsocket <aecsocket@tutanota.com>"]
-description = "Derive macros for bevy_commander"
-homepage = "https://github.com/aecsocket/bevy-commander"
-repository = "https://github.com/aecsocket/bevy-commander"
+description = "Derive macros for bevy_commandeer"
+homepage = "https://github.com/aecsocket/bevy-commandeer"
+repository = "https://github.com/aecsocket/bevy-commandeer"
 license = "MIT OR Apache-2.0"
 
 [lib]

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate as bevy_commander; // for derive
+use crate as bevy_commandeer; // for derive
 use crate::*;
 use bevy::app::AppExit;
 use bevy::prelude::*;

@@ -1,19 +1,20 @@
-use std::{collections::VecDeque, marker::PhantomData, sync::Arc};
+use std::{marker::PhantomData, sync::Arc};
 
-use crate::*;
 use bevy::{prelude::*, utils::HashMap};
 
-pub struct CommanderPlugin<S> {
+use crate::*;
+
+pub struct CommandeerPlugin<S> {
     marker: PhantomData<S>,
 }
 
-impl<S> CommanderPlugin<S> {
+impl<S> CommandeerPlugin<S> {
     pub fn new() -> Self {
         Self { marker: default() }
     }
 }
 
-impl<S: CommandSender> Plugin for CommanderPlugin<S> {
+impl<S: CommandSender> Plugin for CommandeerPlugin<S> {
     fn build(&self, app: &mut App) {
         app.insert_resource(AppCommands::default())
             .add_event::<CommandSent<S>>();
@@ -33,7 +34,7 @@ pub struct AppCommands {
 #[derive(Event)]
 pub struct CommandSent<S> {
     pub name: String,
-    pub args: VecDeque<String>,
+    pub args: Vec<String>,
     pub sender: Arc<S>,
 }
 

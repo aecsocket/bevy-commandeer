@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::marker::PhantomData;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -12,13 +11,13 @@ use rustyline::Editor;
 
 pub type ConsoleEditor = Editor<(), MemHistory>;
 
-pub struct CommanderReadlinePlugin<S> {
+pub struct CommandeerReadlinePlugin<S> {
     pub editor: Mutex<Option<ConsoleEditor>>,
     pub prompt: String,
     pub marker: PhantomData<S>,
 }
 
-impl<S> Default for CommanderReadlinePlugin<S> {
+impl<S> Default for CommandeerReadlinePlugin<S> {
     fn default() -> Self {
         let editor = Editor::with_history(rustyline::Config::default(), MemHistory::new())
             .unwrap_or_else(|e| {
@@ -33,7 +32,7 @@ impl<S> Default for CommanderReadlinePlugin<S> {
     }
 }
 
-impl<S> CommanderReadlinePlugin<S> {
+impl<S> CommandeerReadlinePlugin<S> {
     pub fn with_prompt(prompt: impl Into<String>) -> Self {
         Self {
             prompt: prompt.into(),
@@ -51,7 +50,7 @@ pub trait ConsoleCommandSender: CommandSender {
     fn console() -> Self;
 }
 
-impl<S: ConsoleCommandSender> Plugin for CommanderReadlinePlugin<S> {
+impl<S: ConsoleCommandSender> Plugin for CommandeerReadlinePlugin<S> {
     fn build(&self, app: &mut App) {
         let (tx, rx) = mpsc::channel::<ReadlineInput>();
 
@@ -109,10 +108,13 @@ fn receive_readline<S: ConsoleCommandSender>(
     for input in receiver.try_iter() {
         match input {
             ReadlineInput::Command(command) => {
-                let mut args: VecDeque<String> = command.split(" ").map(|s| s.to_owned()).collect();
-                let Some(name) = args.pop_front() else {
+                let Some(mut args) = shlex::split(&command) else {
                     continue;
                 };
+                if args.is_empty() {
+                    continue;
+                }
+                let name = args.remove(0);
 
                 sent_command.send(CommandSent {
                     name,
