@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -13,25 +14,19 @@ pub trait AppCommand: CommandFactory + FromArgMatches + Sized + Resource {
     fn name() -> &'static str;
 }
 
-pub trait CommandSender: Send + Sync {
-    fn send(&self, line: &str);
-}
+pub trait CommandSender: Any + Send + Sync {
+    fn send_all<'a>(&self, lines: impl IntoIterator<Item = &'a str>);
 
-pub type BoxedSender = Arc<dyn CommandSender>;
-
-pub struct ConsoleCommandSender;
-
-impl CommandSender for ConsoleCommandSender {
     fn send(&self, line: &str) {
-        info!("{}", line);
+        self.send_all([line])
     }
 }
 
-pub struct CommandContext<C>(Vec<(C, BoxedSender)>);
+pub struct CommandContext<C, S>(Vec<(C, Arc<S>)>);
 
-impl<C> IntoIterator for CommandContext<C> {
-    type Item = (C, BoxedSender);
-    type IntoIter = std::vec::IntoIter<(C, BoxedSender)>;
+impl<C, S> IntoIterator for CommandContext<C, S> {
+    type Item = (C, Arc<S>);
+    type IntoIter = std::vec::IntoIter<(C, Arc<S>)>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -40,11 +35,11 @@ impl<C> IntoIterator for CommandContext<C> {
 
 // internals: implementing SystemParam
 
-type CommandSentReader = EventReader<'static, 'static, CommandSent>;
+type CommandSentReader<S> = EventReader<'static, 'static, CommandSent<S>>;
 
-unsafe impl<C: AppCommand> SystemParam for CommandContext<C> {
-    type State = CommandContextState<C>;
-    type Item<'w, 's> = CommandContext<C>;
+unsafe impl<C: AppCommand, S: CommandSender> SystemParam for CommandContext<C, S> {
+    type State = CommandContextState<C, S>;
+    type Item<'w, 's> = CommandContext<C, S>;
 
     fn init_state(world: &mut World, system_meta: &mut SystemMeta) -> Self::State {
         let event_reader = CommandSentReader::init_state(world, system_meta);
@@ -63,7 +58,7 @@ unsafe impl<C: AppCommand> SystemParam for CommandContext<C> {
         let mut event_reader =
             CommandSentReader::get_param(&mut state.event_reader, system_meta, world, change_tick);
 
-        let buf: Vec<(C, BoxedSender)> = event_reader
+        let buf: Vec<(C, Arc<S>)> = event_reader
             .iter()
             .filter_map(|event| {
                 if C::name() != event.name {
@@ -74,10 +69,8 @@ unsafe impl<C: AppCommand> SystemParam for CommandContext<C> {
                     .name(C::name())
                     .color(clap::ColorChoice::Never);
                 
-                fn send_error(sender: &BoxedSender, e: impl ToString) {
-                    for line in e.to_string().lines() {
-                        sender.send(line);
-                    }
+                fn send_error<S: CommandSender>(sender: &S, e: impl ToString) {
+                    sender.send_all(e.to_string().lines());
                 }
 
                 match command.try_get_matches_from(event.args.iter()) {
@@ -85,13 +78,13 @@ unsafe impl<C: AppCommand> SystemParam for CommandContext<C> {
                         match C::from_arg_matches(&matches) {
                             Ok(c) => Some((c, event.sender.clone())),
                             Err(e) => {
-                                send_error(&event.sender, e);
+                                send_error(event.sender.as_ref(), e);
                                 None
                             }
                         }
                     }
                     Err(e) => {
-                        send_error(&event.sender, e);
+                        send_error(event.sender.as_ref(), e);
                         None
                     },
                 }
@@ -102,7 +95,7 @@ unsafe impl<C: AppCommand> SystemParam for CommandContext<C> {
     }
 }
 
-pub struct CommandContextState<C> {
-    event_reader: <CommandSentReader as SystemParam>::State,
+pub struct CommandContextState<C, S: CommandSender> {
+    event_reader: <CommandSentReader<S> as SystemParam>::State,
     marker: PhantomData<C>,
 }

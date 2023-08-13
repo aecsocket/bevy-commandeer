@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::marker::PhantomData;
 use std::sync::{mpsc, Mutex, Arc};
 use std::thread;
 
@@ -11,29 +12,24 @@ use rustyline::Editor;
 
 pub type ConsoleEditor = Editor<(), MemHistory>;
 
-pub struct CommanderReadlinePlugin {
+pub struct CommanderReadlinePlugin<S> {
     pub editor: Mutex<Option<ConsoleEditor>>,
     pub prompt: String,
+    pub marker: PhantomData<S>,
 }
 
-impl CommanderReadlinePlugin {
-    pub fn new(editor: ConsoleEditor, prompt: impl Into<String>) -> Self {
-        let editor = Mutex::new(Some(editor));
-        Self {
-            editor,
-            prompt: prompt.into(),
-        }
-    }
-}
-
-impl CommanderReadlinePlugin {
-    pub fn with_prompt(prompt: impl Into<String>) -> Self {
+impl<S> Default for CommanderReadlinePlugin<S> {
+    fn default() -> Self {
         let editor = Editor::with_history(rustyline::Config::default(), MemHistory::new())
             .unwrap_or_else(|e| {
                 error!("Could not create console command input: {}", e);
                 panic!();
             });
-        Self::new(editor, prompt)
+        Self {
+            editor: Mutex::new(Some(editor)),
+            prompt: "".to_owned(),
+            marker: PhantomData::default(),
+        }
     }
 }
 
@@ -42,7 +38,11 @@ enum ReadlineInput {
     Exit,
 }
 
-impl Plugin for CommanderReadlinePlugin {
+pub trait ConsoleCommandSender: CommandSender {
+    fn console() -> Self;
+}
+
+impl<S: ConsoleCommandSender> Plugin for CommanderReadlinePlugin<S> {
     fn build(&self, app: &mut App) {
         let (tx, rx) = mpsc::channel::<ReadlineInput>();
 
@@ -88,19 +88,22 @@ impl Plugin for CommanderReadlinePlugin {
         });
 
         app.insert_non_send_resource(rx)
-            .add_systems(Update, receive_readline);
+            .add_systems(Update, receive_readline::<S>);
     }
 }
 
-fn receive_readline(
+fn receive_readline<S: ConsoleCommandSender>(
     receiver: NonSend<mpsc::Receiver<ReadlineInput>>,
-    mut sent_command: EventWriter<CommandSent>,
+    mut sent_command: EventWriter<CommandSent<S>>,
     mut exit: EventWriter<AppExit>,
 ) {
     for input in receiver.try_iter() {
         match input {
             ReadlineInput::Command(command) => {
-                let mut args: VecDeque<String> = command.split(" ").map(|s| s.to_owned()).collect();
+                let mut args: VecDeque<String> = command
+                    .split(" ")
+                    .map(|s| s.to_owned())
+                    .collect();
                 let Some(name) = args.pop_front() else {
                     continue;
                 };
@@ -108,7 +111,7 @@ fn receive_readline(
                 sent_command.send(CommandSent {
                     name,
                     args,
-                    sender: Arc::new(ConsoleCommandSender),
+                    sender: Arc::new(S::console()),
                 });
             }
             ReadlineInput::Exit => {

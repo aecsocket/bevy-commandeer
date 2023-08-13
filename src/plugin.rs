@@ -1,13 +1,23 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, marker::PhantomData, sync::Arc};
 
 use crate::prelude::*;
 use bevy::prelude::*;
 
-pub struct CommanderPlugin;
+pub struct CommanderPlugin<S> {
+    marker: PhantomData<S>,
+}
 
-impl Plugin for CommanderPlugin {
+impl<S> CommanderPlugin<S> {
+    pub fn new() -> Self {
+        Self {
+            marker: PhantomData::default(),
+        }
+    }
+}
+
+impl<S: CommandSender> Plugin for CommanderPlugin<S> {
     fn build(&self, app: &mut App) {
-        app.add_event::<CommandSent>();
+        app.add_event::<CommandSent<S>>();
     }
 }
 
@@ -17,10 +27,10 @@ pub enum CommandHandleSet {
 }
 
 #[derive(Event)]
-pub struct CommandSent {
+pub struct CommandSent<S> {
     pub name: String,
     pub args: VecDeque<String>,
-    pub sender: BoxedSender,
+    pub sender: Arc<S>,
 }
 
 pub trait AppExt {
