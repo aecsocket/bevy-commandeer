@@ -39,16 +39,16 @@ pub struct CommandSent<S> {
 }
 
 pub trait AppExt {
-    fn add_command<C: AppCommand, Params>(
+    fn add_command<C: AppCommand, M>(
         &mut self,
-        system: impl IntoSystemConfigs<Params>,
+        system: impl IntoSystemConfigs<M>,
     ) -> &mut Self;
 }
 
 impl AppExt for App {
-    fn add_command<C: AppCommand, Params>(
+    fn add_command<C: AppCommand, M>(
         &mut self,
-        system: impl IntoSystemConfigs<Params>,
+        system: impl IntoSystemConfigs<M>,
     ) -> &mut Self {
         let setup = move |mut commands: ResMut<AppCommands>| {
             let command = create_command::<C>();

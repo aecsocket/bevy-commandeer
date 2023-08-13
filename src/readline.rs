@@ -12,32 +12,32 @@ use rustyline::Editor;
 pub type ConsoleEditor = Editor<(), MemHistory>;
 
 pub struct CommandeerReadlinePlugin<S> {
-    pub editor: Mutex<Option<ConsoleEditor>>,
-    pub prompt: String,
-    pub marker: PhantomData<S>,
+    editor: Mutex<Option<ConsoleEditor>>,
+    prompt: String,
+    marker: PhantomData<S>,
 }
 
-impl<S> Default for CommandeerReadlinePlugin<S> {
-    fn default() -> Self {
-        let editor = Editor::with_history(rustyline::Config::default(), MemHistory::new())
-            .unwrap_or_else(|e| {
-                error!("Could not create console command input: {}", e);
-                panic!();
-            });
+impl<S> CommandeerReadlinePlugin<S> {
+    pub fn with_editor(editor: ConsoleEditor) -> Self {
         Self {
             editor: Mutex::new(Some(editor)),
             prompt: "".to_owned(),
             marker: default(),
         }
     }
-}
 
-impl<S> CommandeerReadlinePlugin<S> {
-    pub fn with_prompt(prompt: impl Into<String>) -> Self {
-        Self {
-            prompt: prompt.into(),
-            ..default()
-        }
+    pub fn new() -> Self {
+        let editor = Editor::with_history(default(), MemHistory::new())
+            .unwrap_or_else(|e| {
+                error!("Could not create console command input: {}", e);
+                panic!();
+            });
+        Self::with_editor(editor)
+    }
+
+    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+        self.prompt = prompt.into();
+        self
     }
 }
 
@@ -57,9 +57,9 @@ impl<S: ConsoleCommandSender> Plugin for CommandeerReadlinePlugin<S> {
         let mut editor = self
             .editor
             .lock()
-            .expect("could not lock readline plugin editor")
+            .unwrap()
             .take()
-            .expect("plugin has already been built and consumed the editor");
+            .unwrap();
         let prompt = self.prompt.clone();
 
         thread::spawn(move || loop {

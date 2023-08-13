@@ -1,9 +1,7 @@
 use bevy::{log::LogPlugin, prelude::*};
 use bevy_commandeer::*;
 
-pub enum Sender {
-    Console,
-}
+pub struct Sender;
 
 impl CommandSender for Sender {
     fn send_all<'a>(&self, lines: impl IntoIterator<Item = &'a str>) {
@@ -15,7 +13,7 @@ impl CommandSender for Sender {
 
 impl ConsoleCommandSender for Sender {
     fn console() -> Self {
-        Self::Console
+        Self
     }
 }
 
@@ -24,8 +22,9 @@ fn main() {
         .add_plugins((MinimalPlugins, LogPlugin::default()))
         .add_plugins((
             CommandeerPlugin::<Sender>::new(),
-            CommandeerReadlinePlugin::<Sender>::with_prompt(""),
             InbuiltCommandPlugins::<Sender>::new(),
+            CommandeerReadlinePlugin::<Sender>::new()
+                .prompt("> "),
         ))
         .add_command::<EchoCommand, _>(echo_command)
         .add_systems(Startup, setup)
