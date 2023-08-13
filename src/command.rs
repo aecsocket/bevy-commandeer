@@ -18,7 +18,7 @@ pub trait CommandSender: Any + Send + Sync {
     fn send_all<'a>(&self, lines: impl IntoIterator<Item = &'a str>);
 
     fn send(&self, line: &str) {
-        self.send_all([line])
+        self.send_all([line.as_ref()])
     }
 }
 
@@ -35,6 +35,13 @@ impl<C, S> IntoIterator for CommandContext<C, S> {
 
 // internals: implementing SystemParam
 
+pub(crate) fn create_command<C: AppCommand>() -> clap::Command {
+    C::command()
+        .no_binary_name(true)
+        .name(C::name())
+        .color(clap::ColorChoice::Never)
+}
+
 type CommandSentReader<S> = EventReader<'static, 'static, CommandSent<S>>;
 
 unsafe impl<C: AppCommand, S: CommandSender> SystemParam for CommandContext<C, S> {
@@ -45,7 +52,7 @@ unsafe impl<C: AppCommand, S: CommandSender> SystemParam for CommandContext<C, S
         let event_reader = CommandSentReader::init_state(world, system_meta);
         CommandContextState {
             event_reader,
-            marker: PhantomData::default(),
+            marker: default(),
         }
     }
 
@@ -64,29 +71,23 @@ unsafe impl<C: AppCommand, S: CommandSender> SystemParam for CommandContext<C, S
                 if C::name() != event.name {
                     return None;
                 }
-                let command = C::command()
-                    .no_binary_name(true)
-                    .name(C::name())
-                    .color(clap::ColorChoice::Never);
-                
+
                 fn send_error<S: CommandSender>(sender: &S, e: impl ToString) {
                     sender.send_all(e.to_string().lines());
                 }
 
-                match command.try_get_matches_from(event.args.iter()) {
-                    Ok(matches) => {
-                        match C::from_arg_matches(&matches) {
-                            Ok(c) => Some((c, event.sender.clone())),
-                            Err(e) => {
-                                send_error(event.sender.as_ref(), e);
-                                None
-                            }
+                match create_command::<C>().try_get_matches_from(event.args.iter()) {
+                    Ok(matches) => match C::from_arg_matches(&matches) {
+                        Ok(c) => Some((c, event.sender.clone())),
+                        Err(e) => {
+                            send_error(event.sender.as_ref(), e);
+                            None
                         }
-                    }
+                    },
                     Err(e) => {
                         send_error(event.sender.as_ref(), e);
                         None
-                    },
+                    }
                 }
             })
             .collect();

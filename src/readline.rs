@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::marker::PhantomData;
-use std::sync::{mpsc, Mutex, Arc};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
 use crate::prelude::*;
@@ -28,7 +28,16 @@ impl<S> Default for CommanderReadlinePlugin<S> {
         Self {
             editor: Mutex::new(Some(editor)),
             prompt: "".to_owned(),
-            marker: PhantomData::default(),
+            marker: default(),
+        }
+    }
+}
+
+impl<S> CommanderReadlinePlugin<S> {
+    pub fn with_prompt(prompt: impl Into<String>) -> Self {
+        Self {
+            prompt: prompt.into(),
+            ..default()
         }
     }
 }
@@ -100,10 +109,7 @@ fn receive_readline<S: ConsoleCommandSender>(
     for input in receiver.try_iter() {
         match input {
             ReadlineInput::Command(command) => {
-                let mut args: VecDeque<String> = command
-                    .split(" ")
-                    .map(|s| s.to_owned())
-                    .collect();
+                let mut args: VecDeque<String> = command.split(" ").map(|s| s.to_owned()).collect();
                 let Some(name) = args.pop_front() else {
                     continue;
                 };

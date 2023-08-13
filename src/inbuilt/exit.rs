@@ -1,10 +1,8 @@
 use std::marker::PhantomData;
 
+use crate::prelude::*;
 use bevy::app::AppExit;
 use bevy::prelude::*;
-use crate::prelude::*;
-
-use crate::plugin::AppExt;
 
 pub struct ExitCommandPlugin<S> {
     marker: PhantomData<S>,
@@ -12,9 +10,7 @@ pub struct ExitCommandPlugin<S> {
 
 impl<S> ExitCommandPlugin<S> {
     pub fn new() -> Self {
-        Self {
-            marker: PhantomData::default(),
-        }
+        Self { marker: default() }
     }
 }
 
@@ -24,6 +20,7 @@ impl<S: CommandSender> Plugin for ExitCommandPlugin<S> {
     }
 }
 
+/// Immediately exits the application
 #[derive(clap::Parser, Resource)]
 struct ExitCommand;
 
@@ -34,10 +31,7 @@ impl AppCommand for ExitCommand {
     }
 }
 
-fn exit_command<S>(
-    ctx: CommandContext<ExitCommand, S>,
-    mut exit: EventWriter<AppExit>,
-) {
+fn exit_command<S>(ctx: CommandContext<ExitCommand, S>, mut exit: EventWriter<AppExit>) {
     for (_, _) in ctx {
         exit.send(AppExit);
     }

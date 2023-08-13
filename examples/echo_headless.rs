@@ -1,5 +1,5 @@
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_commander::{prelude::*, readline::*};
+use bevy_commander::prelude::*;
 
 pub enum Sender {
     Console,
@@ -24,18 +24,18 @@ fn main() {
         .add_plugins((MinimalPlugins, LogPlugin::default()))
         .add_plugins((
             CommanderPlugin::<Sender>::new(),
-            CommanderReadlinePlugin::<Sender> {
-                prompt: "> ".into(),
-                ..default()
-            },
+            CommanderReadlinePlugin::<Sender>::with_prompt(""),
+            InbuiltCommandPlugins::<Sender>::new(),
         ))
         .add_command::<EchoCommand, _>(echo_command)
         .add_systems(Startup, setup)
         .run();
 }
 
+/// Prints the provided message back to the sender
 #[derive(clap::Parser, Resource)]
 struct EchoCommand {
+    /// The message to echo back
     message: String,
 }
 
