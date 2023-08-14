@@ -1,34 +1,17 @@
-use std::marker::PhantomData;
-
-use crate as bevy_commandeer; // for derive
-use crate::*;
 use bevy::prelude::*;
 
-pub struct HelpCommandPlugin<S> {
-    marker: PhantomData<S>,
-}
-
-impl<S> HelpCommandPlugin<S> {
-    pub fn new() -> Self {
-        Self { marker: default() }
-    }
-}
-
-impl<S: CommandSender> Plugin for HelpCommandPlugin<S> {
-    fn build(&self, app: &mut App) {
-        app.add_command::<HelpCommand, _>(help_command::<S>);
-    }
-}
+use crate as bevy_commandeer;
+use crate::prelude::*;
 
 /// Displays information on registered commands
 #[derive(clap::Parser, AppCommand)]
 #[command(name = "help")]
-struct HelpCommand {
+pub struct HelpCommand {
     /// The command to get help information for
     query: Option<String>,
 }
 
-fn help_command<S: CommandSender>(
+pub fn help_command<S: CommandSender>(
     ctx: CommandContext<HelpCommand, S>,
     mut commands: ResMut<AppCommands>,
 ) {
@@ -40,12 +23,12 @@ fn help_command<S: CommandSender>(
                 None => sender.send(&format!("Invalid command '{}'", query)),
             },
             _ => {
-                let longest_name = commands.keys().map(|name| name.len()).max().unwrap_or(0);
+                let longest_name_len = commands.keys().map(|name| name.len()).max().unwrap_or(0);
                 let lines: Vec<String> = commands
                     .iter()
                     .map(|(name, cmd)| {
                         let mut line =
-                            format!("  {}{}", name, " ".repeat(longest_name - name.len()));
+                            format!("  {}{}", name, " ".repeat(longest_name_len - name.len()));
                         match cmd.get_about() {
                             Some(about) => line.push_str(&format!(" - {}", about.to_string())),
                             None => {}

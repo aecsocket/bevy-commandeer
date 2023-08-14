@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -8,13 +7,13 @@ use bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell;
 use bevy::prelude::*;
 use clap::{CommandFactory, FromArgMatches};
 
-use crate::*;
+use crate::prelude::*;
 
 pub trait AppCommand: CommandFactory + FromArgMatches + Sized + Resource {
     fn name() -> &'static str;
 }
 
-pub trait CommandSender: Any + Send + Sync {
+pub trait CommandSender: Send + Sync + 'static {
     fn send_all<'a>(&self, lines: impl IntoIterator<Item = &'a str>);
 
     fn send(&self, line: &str) {

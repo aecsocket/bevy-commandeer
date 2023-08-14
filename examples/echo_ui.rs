@@ -1,6 +1,6 @@
 use bevy::prelude::*;
+use bevy_commandeer::prelude::*;
 use bevy_egui::EguiPlugin;
-use bevy_commandeer::*;
 
 pub struct Sender;
 
@@ -21,11 +21,7 @@ impl ConsoleCommandSender for Sender {
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, EguiPlugin))
-        .add_plugins((
-            CommandeerPlugin::<Sender>::new(),
-            InbuiltCommandPlugins::<Sender>::new(),
-            CommandeerUiPlugin::<Sender>::new(),
-        ))
+        .add_plugins(CommandeerUiPlugin::<Sender>::new())
         .add_command::<EchoCommand, _>(echo_command)
         .run();
 }

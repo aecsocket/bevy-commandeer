@@ -2,22 +2,32 @@ use std::marker::PhantomData;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
-use crate::*;
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use rustyline::error::ReadlineError;
 use rustyline::history::MemHistory;
 use rustyline::Editor;
 
+use crate::prelude::*;
+
 pub type ConsoleEditor = Editor<(), MemHistory>;
 
-pub struct CommandeerReadlinePlugin<S> {
+pub trait ConsoleCommandSender: CommandSender {
+    fn console() -> Self;
+}
+
+enum ReadlineInput {
+    Command(String),
+    Exit,
+}
+
+pub struct ReadlinePlugin<S> {
     editor: Mutex<Option<ConsoleEditor>>,
     prompt: String,
     marker: PhantomData<S>,
 }
 
-impl<S> CommandeerReadlinePlugin<S> {
+impl<S> ReadlinePlugin<S> {
     pub fn with_editor(editor: ConsoleEditor) -> Self {
         Self {
             editor: Mutex::new(Some(editor)),
@@ -27,11 +37,10 @@ impl<S> CommandeerReadlinePlugin<S> {
     }
 
     pub fn new() -> Self {
-        let editor = Editor::with_history(default(), MemHistory::new())
-            .unwrap_or_else(|e| {
-                error!("Could not create console command input: {}", e);
-                panic!();
-            });
+        let editor = Editor::with_history(default(), MemHistory::new()).unwrap_or_else(|e| {
+            error!("Could not create console command input: {}", e);
+            panic!();
+        });
         Self::with_editor(editor)
     }
 
@@ -41,16 +50,7 @@ impl<S> CommandeerReadlinePlugin<S> {
     }
 }
 
-enum ReadlineInput {
-    Command(String),
-    Exit,
-}
-
-pub trait ConsoleCommandSender: CommandSender {
-    fn console() -> Self;
-}
-
-impl<S: ConsoleCommandSender> Plugin for CommandeerReadlinePlugin<S> {
+impl<S: ConsoleCommandSender> Plugin for ReadlinePlugin<S> {
     fn build(&self, app: &mut App) {
         let (tx, rx) = mpsc::channel::<ReadlineInput>();
 
@@ -59,7 +59,7 @@ impl<S: ConsoleCommandSender> Plugin for CommandeerReadlinePlugin<S> {
             .lock()
             .unwrap()
             .take()
-            .unwrap();
+            .expect("plugin has already been applied");
         let prompt = self.prompt.clone();
 
         thread::spawn(move || loop {
@@ -97,6 +97,42 @@ impl<S: ConsoleCommandSender> Plugin for CommandeerReadlinePlugin<S> {
 
         app.insert_non_send_resource(rx)
             .add_systems(Update, receive_readline::<S>);
+    }
+}
+
+pub struct CommandeerReadlinePlugin<S> {
+    plugin: Mutex<Option<ReadlinePlugin<S>>>,
+}
+
+impl<S> CommandeerReadlinePlugin<S> {
+    pub fn new() -> Self {
+        Self {
+            plugin: Mutex::new(Some(ReadlinePlugin::new())),
+        }
+    }
+
+    pub fn prompt(self, prompt: impl Into<String>) -> Self {
+        {
+            let mut plugin = self.plugin.lock().unwrap();
+            *plugin = plugin.take().map(|p| p.prompt(prompt));
+        }
+        self
+    }
+}
+
+impl<S: ConsoleCommandSender> Plugin for CommandeerReadlinePlugin<S> {
+    fn build(&self, app: &mut App) {
+        let plugin = self
+            .plugin
+            .lock()
+            .unwrap()
+            .take()
+            .expect("plugin has already been applied");
+        app.add_plugins((
+            CommandeerPlugin::<S>::new(),
+            InbuiltCommandsPlugin::<S>::new(),
+            plugin,
+        ));
     }
 }
 

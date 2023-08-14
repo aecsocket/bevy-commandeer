@@ -3,24 +3,23 @@ pub mod help;
 
 use std::marker::PhantomData;
 
-use bevy::{app::PluginGroupBuilder, prelude::*};
+use bevy::prelude::*;
 
-use crate::*;
+use crate::prelude::*;
 
-pub struct InbuiltCommandPlugins<S> {
+pub struct InbuiltCommandsPlugin<S> {
     marker: PhantomData<S>,
 }
 
-impl<S> InbuiltCommandPlugins<S> {
+impl<S> InbuiltCommandsPlugin<S> {
     pub fn new() -> Self {
         Self { marker: default() }
     }
 }
 
-impl<S: CommandSender> PluginGroup for InbuiltCommandPlugins<S> {
-    fn build(self) -> PluginGroupBuilder {
-        PluginGroupBuilder::start::<Self>()
-            .add(exit::ExitCommandPlugin::<S>::new())
-            .add(help::HelpCommandPlugin::<S>::new())
+impl<S: CommandSender> Plugin for InbuiltCommandsPlugin<S> {
+    fn build(&self, app: &mut App) {
+        app.add_command::<exit::ExitCommand, _>(exit::exit_command::<S>)
+            .add_command::<help::HelpCommand, _>(help::help_command::<S>);
     }
 }

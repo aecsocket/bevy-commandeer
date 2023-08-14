@@ -2,7 +2,7 @@
 name = "bevy_commandeer_derive"
 version = "0.1.0"
 edition = "2021"
-authors = ["aecsocket <aecsocket@tutanota.com>"]
+authors = [ "aecsocket <aecsocket@tutanota.com>" ]
 description = "Derive macros for bevy_commandeer"
 homepage = "https://github.com/aecsocket/bevy-commandeer"
 repository = "https://github.com/aecsocket/bevy-commandeer"

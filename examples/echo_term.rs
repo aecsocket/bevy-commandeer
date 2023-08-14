@@ -1,5 +1,5 @@
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_commandeer::*;
+use bevy_commandeer::prelude::*;
 
 pub struct Sender;
 
@@ -20,12 +20,7 @@ impl ConsoleCommandSender for Sender {
 fn main() {
     App::new()
         .add_plugins((MinimalPlugins, LogPlugin::default()))
-        .add_plugins((
-            CommandeerPlugin::<Sender>::new(),
-            InbuiltCommandPlugins::<Sender>::new(),
-            CommandeerReadlinePlugin::<Sender>::new()
-                .prompt("> "),
-        ))
+        .add_plugins(CommandeerReadlinePlugin::<Sender>::new().prompt("> "))
         .add_command::<EchoCommand, _>(echo_command)
         .add_systems(Startup, setup)
         .run();

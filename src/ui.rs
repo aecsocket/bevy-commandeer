@@ -1,17 +1,23 @@
-use std::{marker::PhantomData, collections::VecDeque, sync::Mutex};
+use std::{collections::VecDeque, marker::PhantomData, sync::Mutex};
 
-use bevy::{prelude::*, ecs::{schedule::BoxedCondition, world::unsafe_world_cell::UnsafeWorldCell, component::Tick}};
-use bevy_egui::{egui::{self, FontId, TextFormat, ScrollArea, text::LayoutJob, Color32, TextEdit, TextStyle}, EguiContexts};
+use bevy::ecs::{
+    component::Tick, schedule::BoxedCondition, world::unsafe_world_cell::UnsafeWorldCell,
+};
+use bevy::prelude::*;
+use bevy_egui::{
+    egui::{self, text::LayoutJob, Color32, FontId, ScrollArea, TextEdit, TextFormat, TextStyle},
+    EguiContexts,
+};
 use clap::builder::StyledStr;
 
-use crate::*;
+use crate::prelude::*;
 
-pub struct CommandeerUiPlugin<S> {
+pub struct ConsoleUiPlugin<S> {
     condition: Mutex<Option<BoxedCondition>>,
     marker: PhantomData<S>,
 }
 
-impl<S> CommandeerUiPlugin<S> {
+impl<S> ConsoleUiPlugin<S> {
     pub fn new() -> Self {
         Self {
             condition: Mutex::new(None),
@@ -26,7 +32,7 @@ impl<S> CommandeerUiPlugin<S> {
     }
 }
 
-impl<S: CommandSender> Plugin for CommandeerUiPlugin<S> {
+impl<S: CommandSender> Plugin for ConsoleUiPlugin<S> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ConsoleState::default())
             .insert_resource(ConsoleConfig::default());
@@ -36,6 +42,42 @@ impl<S: CommandSender> Plugin for CommandeerUiPlugin<S> {
             console_ui = console_ui.run_if(BoxedConditionHelper(condition));
         }
         app.add_systems(Update, console_ui);
+    }
+}
+
+pub struct CommandeerUiPlugin<S> {
+    plugin: Mutex<Option<ConsoleUiPlugin<S>>>,
+}
+
+impl<S> CommandeerUiPlugin<S> {
+    pub fn new() -> Self {
+        Self {
+            plugin: Mutex::new(Some(ConsoleUiPlugin::new())),
+        }
+    }
+
+    pub fn run_if<M>(self, condition: impl Condition<M>) -> Self {
+        {
+            let mut plugin = self.plugin.lock().unwrap();
+            *plugin = plugin.take().map(|p| p.run_if(condition));
+        }
+        self
+    }
+}
+
+impl<S: CommandSender> Plugin for CommandeerUiPlugin<S> {
+    fn build(&self, app: &mut App) {
+        let plugin = self
+            .plugin
+            .lock()
+            .unwrap()
+            .take()
+            .expect("plugin has already been applied");
+        app.add_plugins((
+            CommandeerPlugin::<S>::new(),
+            InbuiltCommandsPlugin::<S>::new(),
+            plugin,
+        ));
     }
 }
 
@@ -53,7 +95,7 @@ impl Default for ConsoleConfig {
             pos: egui::pos2(200.0, 100.0),
             size: egui::vec2(400.0, 800.0),
             history_size: 100,
-            prompt: "> ".to_owned(),
+            prompt: "".to_owned(),
         }
     }
 }
@@ -66,11 +108,7 @@ pub struct ConsoleState {
     pub history_index: usize,
 }
 
-fn console_ui(
-    mut egui: EguiContexts,
-    config: Res<ConsoleConfig>,
-    mut state: ResMut<ConsoleState>,
-) {
+fn console_ui(mut egui: EguiContexts, config: Res<ConsoleConfig>, mut state: ResMut<ConsoleState>) {
     egui::Window::new("Console")
         .collapsible(false)
         .default_pos(config.pos)
@@ -78,7 +116,6 @@ fn console_ui(
         .resizable(true)
         .show(egui.ctx_mut(), |ui| {
             ui.vertical(|ui| {
-
                 ScrollArea::vertical()
                     .auto_shrink([false, false])
                     .stick_to_bottom(true)
@@ -96,7 +133,7 @@ fn console_ui(
                             }
                         })
                     });
-                
+
                 ui.separator();
 
                 let buf_edit = TextEdit::singleline(&mut state.buf)

@@ -2,7 +2,7 @@ use std::{marker::PhantomData, sync::Arc};
 
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::*;
+use crate::prelude::*;
 
 pub struct CommandeerPlugin<S> {
     marker: PhantomData<S>,
@@ -39,19 +39,13 @@ pub struct CommandSent<S> {
 }
 
 pub trait AppExt {
-    fn add_command<C: AppCommand, M>(
-        &mut self,
-        system: impl IntoSystemConfigs<M>,
-    ) -> &mut Self;
+    fn add_command<C: AppCommand, M>(&mut self, system: impl IntoSystemConfigs<M>) -> &mut Self;
 }
 
 impl AppExt for App {
-    fn add_command<C: AppCommand, M>(
-        &mut self,
-        system: impl IntoSystemConfigs<M>,
-    ) -> &mut Self {
+    fn add_command<C: AppCommand, M>(&mut self, system: impl IntoSystemConfigs<M>) -> &mut Self {
         let setup = move |mut commands: ResMut<AppCommands>| {
-            let command = create_command::<C>();
+            let command = crate::command::create_command::<C>();
             let name = C::name();
             if commands.all.contains_key(name) {
                 warn!("Command '{}' is already registered, overwriting", name);
