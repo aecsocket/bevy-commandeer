@@ -462,19 +462,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_commandeer"
+name = "bevy_commands"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_commandeer_derive",
+ "bevy_commands_derive",
  "bevy_egui",
  "clap",
+ "expedition",
  "rustyline",
  "shlex",
 ]
 
 [[package]]
-name = "bevy_commandeer_derive"
+name = "bevy_commands_derive"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
@@ -1580,6 +1581,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
+
+[[package]]
 name = "emath"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1702,6 +1709,16 @@ name = "event-listener"
 version = "2.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
+
+[[package]]
+name = "expedition"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f696c869eb92bfaf11398ee7ef191fba1057d76be1580b9df93004f82413a82"
+dependencies = [
+ "ecolor",
+ "itertools",
+]
 
 [[package]]
 name = "fastrand"
@@ -2207,6 +2224,15 @@ dependencies = [
  "hermit-abi",
  "rustix",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
 ]
 
 [[package]]

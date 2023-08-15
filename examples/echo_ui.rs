@@ -34,8 +34,8 @@ struct EchoCommand {
     message: String,
 }
 
-fn echo_command(ctx: CommandContext<EchoCommand, Sender>) {
+fn echo_command(ctx: CommandQueue<EchoCommand, Sender>) {
     for (cmd, sender) in ctx {
-        sender.send(&cmd.message);
+        sender.send_lines(&cmd.message);
     }
 }

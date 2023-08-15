@@ -1,23 +1,14 @@
-pub mod command;
-#[cfg(feature = "inbuilt")]
-pub mod inbuilt;
+//#![warn(missing_docs)]
+#![warn(clippy::all)]
+#![warn(clippy::nursery)]
+//#![warn(clippy::cargo)]
+
 pub mod plugin;
-#[cfg(feature = "readline")]
-pub mod readline;
-#[cfg(feature = "ui")]
-pub mod ui;
+#[cfg(feature = "rustyline")]
+pub mod rustyline;
 
-pub mod prelude {
-    #[cfg(feature = "derive")]
-    pub use bevy_commandeer_derive::AppCommand;
-    pub use clap;
+#[cfg(feature = "derive")]
+pub use bevy_commands_derive::AppCommand;
+pub use clap;
 
-    pub use crate::command::{AppCommand, CommandContext, CommandSender};
-    #[cfg(feature = "inbuilt")]
-    pub use crate::inbuilt::InbuiltCommandsPlugin;
-    pub use crate::plugin::{AppCommands, AppExt, CommandSent, CommandeerPlugin};
-    #[cfg(feature = "readline")]
-    pub use crate::readline::{CommandeerReadlinePlugin, ConsoleCommandSender, ReadlinePlugin};
-    #[cfg(feature = "ui")]
-    pub use crate::ui::{CommandeerUiPlugin, ConsoleUiPlugin};
-}
+pub use crate::plugin::{CommandResponse, CommandSent, CommandsPlugin};

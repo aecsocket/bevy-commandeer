@@ -1,59 +1,24 @@
-use std::{marker::PhantomData, sync::Arc};
+use bevy::prelude::*;
+use expedition::Message;
 
-use bevy::{prelude::*, utils::HashMap};
+pub struct CommandsPlugin;
 
-use crate::prelude::*;
-
-pub struct CommandeerPlugin<S> {
-    marker: PhantomData<S>,
-}
-
-impl<S> CommandeerPlugin<S> {
-    pub fn new() -> Self {
-        Self { marker: default() }
-    }
-}
-
-impl<S: CommandSender> Plugin for CommandeerPlugin<S> {
+impl Plugin for CommandsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(AppCommands::default())
-            .add_event::<CommandSent<S>>();
+        app.add_event::<CommandSent>()
+            .add_event::<CommandResponse>();
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-pub enum CommandHandleSet {
-    Commands,
-}
-
-#[derive(Resource, Default)]
-pub struct AppCommands {
-    pub all: HashMap<&'static str, clap::Command>,
 }
 
 #[derive(Event)]
-pub struct CommandSent<S> {
-    pub name: String,
+pub struct CommandSent {
+    pub binary: String,
     pub args: Vec<String>,
-    pub sender: Arc<S>,
+    pub sender: Entity,
 }
 
-pub trait AppExt {
-    fn add_command<C: AppCommand, M>(&mut self, system: impl IntoSystemConfigs<M>) -> &mut Self;
-}
-
-impl AppExt for App {
-    fn add_command<C: AppCommand, M>(&mut self, system: impl IntoSystemConfigs<M>) -> &mut Self {
-        let setup = move |mut commands: ResMut<AppCommands>| {
-            let command = crate::command::create_command::<C>();
-            let name = C::name();
-            if commands.all.contains_key(name) {
-                warn!("Command '{}' is already registered, overwriting", name);
-            }
-            commands.all.insert(name, command);
-        };
-
-        self.add_systems(Startup, setup)
-            .add_systems(Update, system.in_set(CommandHandleSet::Commands))
-    }
+#[derive(Event)]
+pub struct CommandResponse {
+    pub target: Entity,
+    pub msg: Message,
 }
