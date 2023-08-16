@@ -472,6 +472,7 @@ dependencies = [
  "expedition",
  "rustyline",
  "shlex",
+ "termcolor",
 ]
 
 [[package]]
@@ -1718,6 +1719,7 @@ checksum = "1f696c869eb92bfaf11398ee7ef191fba1057d76be1580b9df93004f82413a82"
 dependencies = [
  "ecolor",
  "itertools",
+ "termcolor",
 ]
 
 [[package]]

@@ -1,21 +1,21 @@
-use std::{
-    sync::{mpsc, Mutex},
-    thread,
-};
+use std::sync::{mpsc, Mutex};
+use std::thread;
 
+use bevy::app::PluginGroupBuilder;
 use bevy::{app::AppExit, prelude::*};
 use rustyline::{error::ReadlineError, history::MemHistory, Editor};
 
-use crate::{CommandResponse, CommandSent};
+use crate::inbuilt::InbuiltCommandsPlugin;
+use crate::{CommandInput, CommandResponse, CommandSet, CommandsPlugin, Outcome};
 
 pub type StdinEditor = Editor<(), MemHistory>;
 
-pub struct RustylineInputPlugin {
+pub struct StdinInputPlugin {
     editor: Mutex<Option<StdinEditor>>,
     prompt: String,
 }
 
-impl RustylineInputPlugin {
+impl StdinInputPlugin {
     pub fn with_editor(editor: StdinEditor) -> Self {
         Self {
             editor: Mutex::new(Some(editor)),
@@ -38,7 +38,7 @@ impl RustylineInputPlugin {
     }
 }
 
-impl Plugin for RustylineInputPlugin {
+impl Plugin for StdinInputPlugin {
     fn build(&self, app: &mut App) {
         let (mut tx, rx) = mpsc::channel::<StdinInput>();
 
@@ -49,13 +49,28 @@ impl Plugin for RustylineInputPlugin {
         });
 
         app.insert_non_send_resource(rx)
-            .add_systems(Update, process_stdin_input);
+            .add_systems(Startup, setup_stdio_sender)
+            .add_systems(Update, process_stdin_input.in_set(CommandSet::Dispatch))
+            .add_systems(Update, respond_default_stdio.in_set(CommandSet::Response));
     }
 }
+
+#[derive(Resource)]
+pub struct StdioCommandSender(Entity);
+
+#[derive(Component)]
+struct DefaultStdioCommandSender;
 
 enum StdinInput {
     Buf(String),
     Exit,
+}
+
+fn setup_stdio_sender(mut commands: Commands) {
+    let sender = commands
+        .spawn((Name::new("Stdio command sender"), DefaultStdioCommandSender))
+        .id();
+    commands.insert_resource(StdioCommandSender(sender));
 }
 
 fn read_stdin(editor: &mut StdinEditor, prompt: &String, tx: &mut mpsc::Sender<StdinInput>) {
@@ -80,14 +95,11 @@ fn read_stdin(editor: &mut StdinEditor, prompt: &String, tx: &mut mpsc::Sender<S
     }
 }
 
-#[derive(Component)]
-pub struct StdioCommandSender;
-
 fn process_stdin_input(
     rx: NonSend<mpsc::Receiver<StdinInput>>,
-    mut command_sent: EventWriter<CommandSent>,
+    mut command_sent: EventWriter<CommandInput>,
     mut app_exit: EventWriter<AppExit>,
-    senders: Query<Entity, With<StdioCommandSender>>,
+    sender: Res<StdioCommandSender>,
 ) {
     for input in rx.try_iter() {
         match input {
@@ -97,10 +109,10 @@ fn process_stdin_input(
                     continue;
                 }
                 let binary = args.remove(0);
-                command_sent.send(CommandSent {
-                    binary,
+                command_sent.send(CommandInput {
+                    sender: sender.0,
+                    name: binary,
                     args,
-                    sender: sender.0, // ??!?!?!?!??!
                 })
             }
             StdinInput::Exit => app_exit.send(AppExit),
@@ -108,4 +120,43 @@ fn process_stdin_input(
     }
 }
 
-fn output_response_stdio(mut events: EventReader<CommandResponse>) {}
+fn respond_default_stdio(
+    mut resps: EventReader<CommandResponse>,
+    stdio_sender: Query<Entity, With<DefaultStdioCommandSender>>,
+) {
+    let Ok(sender) = stdio_sender.get_single() else {
+        return;
+    };
+    for resp in resps.iter().filter(|r| r.target == sender) {
+        match resp.outcome {
+            Outcome::Ok => info!("{}", resp.message),
+            Outcome::Err => warn!("{}", resp.message),
+        }
+    }
+}
+
+pub struct CommandsStdinPlugins {
+    pub stdin: StdinInputPlugin,
+}
+
+impl CommandsStdinPlugins {
+    pub fn new() -> Self {
+        Self {
+            stdin: StdinInputPlugin::new(),
+        }
+    }
+
+    pub fn prompt(mut self, prompt: impl Into<String>) -> Self {
+        self.stdin = self.stdin.prompt(prompt);
+        self
+    }
+}
+
+impl PluginGroup for CommandsStdinPlugins {
+    fn build(self) -> PluginGroupBuilder {
+        PluginGroupBuilder::start::<Self>()
+            .add(CommandsPlugin::new())
+            .add(InbuiltCommandsPlugin)
+            .add(self.stdin)
+    }
+}

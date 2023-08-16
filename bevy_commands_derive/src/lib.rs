@@ -14,7 +14,7 @@ pub fn derive_command(input: TokenStream) -> TokenStream {
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     TokenStream::from(quote! {
-        impl #impl_generics bevy_commandeer::command::AppCommand for #name #type_generics #where_clause {
+        impl #impl_generics bevy_commands::AppCommand for #name #type_generics #where_clause {
             fn name() -> &'static str {
                 #name_string
             }
