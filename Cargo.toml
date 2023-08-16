@@ -18,8 +18,8 @@ inbuilt = [ "derive" ]
 ## Allows using the `AppCommand` derive macro.
 derive = [ "dep:bevy_commands_derive" ]
 
-## Allows accepting stdin input as commands, using [`rustyline`](https://docs.rs/rustyline).
-stdin = [ "dep:rustyline", "dep:shlex", "expedition/termcolor" ]
+## Allows accepting stdio input as commands, using [`rustyline`](https://docs.rs/rustyline).
+stdio = [ "dep:rustyline", "dep:shlex", "expedition/termcolor" ]
 
 ## Allows displaying a console UI for commands, using [`bevy_egui`](https://docs.rs/bevy_egui).
 ui = [ "dep:bevy_egui", "dep:shlex" ]
