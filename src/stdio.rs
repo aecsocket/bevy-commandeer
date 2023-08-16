@@ -34,30 +34,36 @@ impl StdioInputPlugin {
 
 impl Plugin for StdioInputPlugin {
     fn build(&self, app: &mut App) {
-        let (mut tx_input, rx_input) = mpsc::channel::<StdioInput>();
+        let (tx_input, rx_input) = mpsc::channel::<StdioInput>();
         let (tx_prompt, rx_prompt) = mpsc::channel::<String>();
 
-        let mut editor = self.editor.lock().unwrap().take().unwrap();
+        let editor = self.editor.lock().unwrap().take().unwrap();
         thread::spawn(move || read_stdio(editor, tx_input, rx_prompt));
 
-        app.insert_non_send_resource(rx_input)
-            .insert_resource(StdioPrompt("".into()))
+        app.insert_resource(StdioPrompt("".into()))
+            .insert_non_send_resource(StdioChannels {
+                rx_input,
+                tx_prompt,
+            })
             .add_systems(Startup, setup_stdio_sender)
-            .add_systems(Update, (receive_stdio_input, send_stdio_prompt).in_set(CommandSet::Dispatch))
+            .add_systems(
+                Update,
+                (receive_stdio_input, send_stdio_prompt).in_set(CommandSet::Dispatch),
+            )
             .add_systems(Update, respond_default_stdio.in_set(CommandSet::Response));
     }
 }
 
-pub struct StdioChannels {
-    pub rx_input: Receiver<StdioInput>,
-    pub tx_prompt: Sender<String>,
+struct StdioChannels {
+    rx_input: Receiver<StdioInput>,
+    tx_prompt: Sender<String>,
 }
 
 #[derive(Resource)]
-pub struct StdioPrompt(String);
+pub struct StdioPrompt(pub String);
 
 #[derive(Resource)]
-pub struct StdioCommandSender(Entity);
+pub struct StdioCommandSender(pub Entity);
 
 #[derive(Component)]
 struct DefaultStdioCommandSender;
@@ -74,17 +80,13 @@ fn setup_stdio_sender(mut commands: Commands) {
     commands.insert_resource(StdioCommandSender(sender));
 }
 
-fn read_stdio(
-    mut editor: StdioEditor,
-    mut tx_input: Sender<StdioInput>,
-    rx_prompt: Receiver<String>,
-) {
-    let mut prompt = "";
+fn read_stdio(mut editor: StdioEditor, tx_input: Sender<StdioInput>, rx_prompt: Receiver<String>) {
+    let mut prompt = "".to_owned();
     loop {
-        for new_prompt in rx_prompt.try_iter() {
-            prompt = &new_prompt;
+        if let Some(new_prompt) = rx_prompt.try_iter().last() {
+            prompt = new_prompt;
         }
-        match editor.readline(prompt) {
+        match editor.readline(&prompt) {
             Ok(buf) => {
                 if let Err(e) = tx_input.send(StdioInput::Buf(buf)) {
                     warn!("Could not send command buffer to app: {}", e);
@@ -119,10 +121,10 @@ fn receive_stdio_input(
                 if args.is_empty() {
                     continue;
                 }
-                let binary = args.remove(0);
+                let name = args.remove(0);
                 command_sent.send(CommandInput {
                     sender: sender.0,
-                    name: binary,
+                    name,
                     args,
                 })
             }
@@ -131,10 +133,7 @@ fn receive_stdio_input(
     }
 }
 
-fn send_stdio_prompt(
-    channels: NonSend<StdioChannels>,
-    prompt: Res<StdioPrompt>,
-) {
+fn send_stdio_prompt(channels: NonSend<StdioChannels>, prompt: Res<StdioPrompt>) {
     if !prompt.is_changed() {
         return;
     }
@@ -158,23 +157,13 @@ fn respond_default_stdio(
     }
 }
 
-pub struct CommandsStdioPlugins {
-    pub stdio: StdioInputPlugin,
-}
-
-impl CommandsStdioPlugins {
-    pub fn new() -> Self {
-        Self {
-            stdio: StdioInputPlugin::new(),
-        }
-    }
-}
+pub struct CommandsStdioPlugins;
 
 impl PluginGroup for CommandsStdioPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(CommandsPlugin::new())
+            .add(CommandsPlugin)
             .add(InbuiltCommandsPlugin)
-            .add(self.stdio)
+            .add(StdioInputPlugin::new())
     }
 }

@@ -2,27 +2,12 @@ use bevy::{prelude::*, utils::HashMap};
 
 use crate::{AppCommand, CommandDispatch, CommandResponse};
 
-pub struct CommandsPlugin {
-    pub invalid_command_response: bool,
-}
-
-impl Default for CommandsPlugin {
-    fn default() -> Self {
-        Self {
-            invalid_command_response: true,
-        }
-    }
-}
-
-impl CommandsPlugin {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
+pub struct CommandsPlugin;
 
 impl Plugin for CommandsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(CommandMetaMap(HashMap::default()))
+            .insert_resource(RespondToInvalidCommand(true))
             .add_event::<CommandInput>()
             .add_event::<CommandResponse>()
             .add_event::<InvalidCommandInput>()
@@ -47,14 +32,13 @@ impl Plugin for CommandsPlugin {
                 (mark_invalid_commands)
                     .after(CommandSet::Dispatch)
                     .before(CommandSet::Response),
-            );
-
-        if self.invalid_command_response {
-            app.add_systems(
+            )
+            .add_systems(
                 Update,
-                (invalid_command_responses).in_set(CommandSet::Response),
+                (invalid_command_response)
+                    .after(CommandSet::Response)
+                    .run_if(respond_to_invalid_command),
             );
-        }
     }
 }
 
@@ -74,7 +58,14 @@ fn have_responses(resps: EventReader<CommandResponse>) -> bool {
 }
 
 #[derive(Resource)]
-pub struct CommandMetaMap(HashMap<&'static str, clap::Command>);
+pub struct RespondToInvalidCommand(pub bool);
+
+fn respond_to_invalid_command(res: Res<RespondToInvalidCommand>) -> bool {
+    res.0
+}
+
+#[derive(Resource)]
+pub struct CommandMetaMap(pub HashMap<&'static str, clap::Command>);
 
 pub trait AddAppCommand {
     fn add_app_command<C: AppCommand, M>(&mut self, system: impl IntoSystemConfigs<M>)
@@ -101,6 +92,7 @@ impl AddAppCommand for App {
                   mut dispatch: EventWriter<CommandDispatch<C>>,
                   mut resps: EventWriter<CommandResponse>| {
                 for input in input.iter().filter(|input| input.name == C::name()) {
+                    debug!("Dispatching '{}' sent by {:?}", input.name, input.sender);
                     match command::<C>()
                         .clone()
                         .try_get_matches_from(input.args.iter())
@@ -151,6 +143,7 @@ fn mark_invalid_commands(
         .iter()
         .filter(|input| !command_meta.0.contains_key(input.name.as_str()))
     {
+        debug!("Marking '{}' sent by {:?} as invalid", input.name, input.sender);
         invalid.send(InvalidCommandInput {
             target: input.sender,
             name: input.name.clone(),
@@ -158,14 +151,14 @@ fn mark_invalid_commands(
     }
 }
 
-fn invalid_command_responses(
+fn invalid_command_response(
     mut events: EventReader<InvalidCommandInput>,
     mut resps: EventWriter<CommandResponse>,
 ) {
     for event in events.iter() {
         resps.send(CommandResponse::err(
             event.target,
-            format!("no such command: {}", event.name),
+            format!("No such command: {}", event.name),
         ));
     }
 }

@@ -3,6 +3,7 @@ use bevy::{app::AppExit, prelude::EventWriter};
 
 use crate::{AppCommand, QueuedCommands};
 
+/// Immediately exits the application.
 #[derive(clap::Parser, AppCommand)]
 #[command(name = "exit")]
 pub struct ExitCommand;

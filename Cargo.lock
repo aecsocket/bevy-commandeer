@@ -1718,6 +1718,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f696c869eb92bfaf11398ee7ef191fba1057d76be1580b9df93004f82413a82"
 dependencies = [
  "ecolor",
+ "egui",
  "itertools",
  "termcolor",
 ]

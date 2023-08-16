@@ -19,8 +19,10 @@ pub use clap;
 pub use crate::dispatch::{
     AppCommand, CommandContext, CommandDispatch, CommandResponse, Outcome, QueuedCommands,
 };
-pub use crate::plugin::{AddAppCommand, CommandInput, CommandSet, CommandsPlugin};
+#[cfg(feature = "inbuilt")]
+pub use crate::inbuilt::InbuiltCommandsPlugin;
+pub use crate::plugin::{AddAppCommand, CommandInput, CommandSet, CommandsPlugin, CommandMetaMap};
 #[cfg(feature = "stdio")]
-pub use crate::stdio::{StdioInputPlugin, CommandsStdioPlugins};
+pub use crate::stdio::{CommandsStdioPlugins, StdioInputPlugin, StdioPrompt};
 #[cfg(feature = "ui")]
-pub use crate::ui::{UiInputPlugin, CommandsUiPlugins};
+pub use crate::ui::{CommandsUiPlugins, UiInputPlugin};

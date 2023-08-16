@@ -22,7 +22,7 @@ derive = [ "dep:bevy_commands_derive" ]
 stdio = [ "dep:rustyline", "dep:shlex", "expedition/termcolor" ]
 
 ## Allows displaying a console UI for commands, using [`bevy_egui`](https://docs.rs/bevy_egui).
-ui = [ "dep:bevy_egui", "dep:shlex" ]
+ui = [ "dep:bevy_egui", "dep:shlex", "expedition/egui" ]
 
 [dependencies]
 bevy = { version = "0.11", default-features = false }
