@@ -20,7 +20,7 @@ pub fn help_command(mut queue: QueuedCommands<HelpCommand>, mut command_meta: Re
                         ctx.ok(line);
                     }
                 }
-                None => ctx.err(format!("Invalid command '{}'", query)),
+                None => ctx.err(format!("No such command: {}", query)),
             }
             None => {
                 let longest_name_len = command_meta.0
@@ -28,10 +28,14 @@ pub fn help_command(mut queue: QueuedCommands<HelpCommand>, mut command_meta: Re
                     .map(|name| name.len())
                     .max()
                     .unwrap_or(0);
+                ctx.ok("Available commands:");
                 for (name, command) in command_meta.0.iter() {
+                    let indent = " ".repeat(longest_name_len - name.len());
                     let message = match command.get_about() {
-                        Some(about) => format!("  -")
-                    }
+                        Some(about) => format!("  {}{} - {}", name, indent, about),
+                        None => format!("  {}{}", name, indent),
+                    };
+                    ctx.ok(message);
                 }
             }
         }
