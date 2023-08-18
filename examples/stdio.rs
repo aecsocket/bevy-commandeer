@@ -1,5 +1,5 @@
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_commands::{stdio::CommandsStdioPlugins, AddAppCommand, AppCommand, QueuedCommands};
+use bevy_commands::{stdio::CommandsStdioPlugins, AddAppCommand, AppCommand, QueuedCommands, CommandResponder, respond_ok};
 
 fn main() {
     App::new()
@@ -24,7 +24,7 @@ struct RepeatCommand {
 fn repeat_command(mut queue: QueuedCommands<RepeatCommand>) {
     queue.consume(|mut ctx| {
         for _ in 0..ctx.data.count {
-            ctx.ok(ctx.data.message.clone());
+            respond_ok!(ctx, "Sent: {}", ctx.data.message);
         }
     })
 }

@@ -6,9 +6,9 @@ use crate::{AppCommand, QueuedCommands};
 /// Immediately exits the application.
 #[derive(clap::Parser, AppCommand)]
 #[command(name = "exit")]
-pub struct ExitCommand;
+pub struct Exit;
 
-pub fn exit_command(mut queue: QueuedCommands<ExitCommand>, mut app_exit: EventWriter<AppExit>) {
+pub fn exit(mut queue: QueuedCommands<Exit>, mut app_exit: EventWriter<AppExit>) {
     queue.consume(|_| {
         app_exit.send(AppExit);
     });

@@ -63,26 +63,30 @@ impl<C: AppCommand> QueuedCommands<'_, '_, C> {
     }
 }
 
+pub trait CommandResponder {
+    fn respond(&mut self, outcome: Outcome, message: impl Into<Message>);
+
+    fn ok(&mut self, message: impl Into<Message>) {
+        self.respond(Outcome::Ok, message);
+    }
+
+    fn err(&mut self, message: impl Into<Message>) {
+        self.respond(Outcome::Err, message);
+    }
+}
+
 pub struct CommandContext<'a, 'w, C: AppCommand> {
     pub sender: Entity,
     pub data: &'a C,
     responses: &'a mut EventWriter<'w, CommandResponse>,
 }
 
-impl<C: AppCommand> CommandContext<'_, '_, C> {
-    pub fn respond(&mut self, outcome: Outcome, message: impl Into<Message>) {
+impl<C: AppCommand> CommandResponder for CommandContext<'_, '_, C> {
+    fn respond(&mut self, outcome: Outcome, message: impl Into<Message>) {
         self.responses.send(CommandResponse {
             target: self.sender,
             message: message.into(),
             outcome,
         });
-    }
-
-    pub fn ok(&mut self, message: impl Into<Message>) {
-        self.respond(Outcome::Ok, message)
-    }
-
-    pub fn err(&mut self, message: impl Into<Message>) {
-        self.respond(Outcome::Err, message)
     }
 }

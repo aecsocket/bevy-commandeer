@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_commands::{
     egui::{CommandsEguiPlugins, ConsoleUiOpen},
-    AddAppCommand, AppCommand, QueuedCommands,
+    AddAppCommand, AppCommand, QueuedCommands, CommandResponder, respond_ok
 };
 use bevy_egui::EguiPlugin;
 
@@ -28,7 +28,7 @@ struct RepeatCommand {
 fn repeat_command(mut queue: QueuedCommands<RepeatCommand>) {
     queue.consume(|mut ctx| {
         for _ in 0..ctx.data.count {
-            ctx.ok(ctx.data.message.clone());
+            respond_ok!(ctx, "Sent: {}", ctx.data.message);
         }
     })
 }

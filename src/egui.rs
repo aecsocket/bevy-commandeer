@@ -3,9 +3,12 @@ use bevy_egui::{
     egui::{self, FontId, TextStyle},
     EguiContexts,
 };
-use expedition::{egui::StyleToFormat, Message, Styleable, Color32, MessageStyle};
+use expedition::{egui::StyleToFormat, Color32, Message, MessageStyle, Styleable};
 
-use crate::{CommandBufInput, CommandsPlugin, InbuiltCommandsPlugin, DEFAULT_PROMPT, CommandResponse, CommandSet, Outcome};
+use crate::{
+    CommandBufInput, CommandResponse, CommandSet, CommandsPlugin, InbuiltCommandsPlugin, Outcome,
+    DEFAULT_PROMPT,
+};
 
 pub struct EguiInputPlugin;
 
@@ -27,7 +30,10 @@ struct DefaultEguiCommandSender;
 
 fn setup_ui_sender(mut commands: Commands) {
     let sender = commands
-        .spawn((Name::new("Console UI command sender"), DefaultEguiCommandSender))
+        .spawn((
+            Name::new("Console UI command sender"),
+            DefaultEguiCommandSender,
+        ))
         .id();
     commands.insert_resource(EguiCommandSender(sender));
 }
@@ -67,6 +73,7 @@ fn console_ui_open(res: Res<ConsoleUiOpen>) -> bool {
 
 fn console_ui(
     mut egui: EguiContexts,
+    open: Res<ConsoleUiOpen>,
     mut state: ResMut<ConsoleUiState>,
     mut command_input: EventWriter<CommandBufInput>,
     sender: Res<EguiCommandSender>,
@@ -79,7 +86,6 @@ fn console_ui(
     egui::Window::new("Console")
         .collapsible(false)
         .resizable(true)
-        .default_pos([200.0, 100.0])
         .default_size([800.0, 400.0])
         .show(egui.ctx_mut(), |ui| {
             ui.vertical(|ui| {
@@ -101,18 +107,24 @@ fn console_ui(
                     .font(TextStyle::Monospace);
 
                 let buf_edit_resp = ui.add(buf_edit);
-                if buf_edit_resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                let entered =
+                    buf_edit_resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+
+                if entered {
                     let buf = state.buf.trim().to_owned();
                     let prompt_line = format!("{}{}", state.prompt, buf);
                     state.push_line(prompt_line);
                     state.buf.clear();
                     if !buf.is_empty() {
+                        info!("Issued console command: {}", buf);
                         command_input.send(CommandBufInput {
                             sender: sender.0,
                             buf,
                         });
                     }
+                }
 
+                if entered || open.is_changed() {
                     ui.memory_mut(|m| m.request_focus(buf_edit_resp.id));
                 }
             });
