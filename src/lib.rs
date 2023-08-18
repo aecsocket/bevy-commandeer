@@ -9,8 +9,8 @@ pub mod inbuilt;
 pub mod plugin;
 #[cfg(feature = "stdio")]
 pub mod stdio;
-#[cfg(feature = "ui")]
-pub mod ui;
+#[cfg(feature = "egui")]
+pub mod egui;
 
 #[cfg(feature = "derive")]
 pub use bevy_commands_derive::AppCommand;
@@ -24,5 +24,7 @@ pub use crate::inbuilt::InbuiltCommandsPlugin;
 pub use crate::plugin::{
     AddAppCommand, CommandBufInput, CommandMetaMap, CommandSet, CommandsPlugin,
 };
+#[cfg(feature = "egui")]
+pub use crate::egui::{EguiInputPlugin, EguiCommandSender, ConsoleUiOpen, ConsoleUiState, CommandsEguiPlugins};
 
 pub const DEFAULT_PROMPT: &str = "> ";

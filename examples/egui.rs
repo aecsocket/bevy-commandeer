@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_commands::{
-    ui::{CommandsUiPlugins, ConsoleUiOpen},
+    egui::{CommandsEguiPlugins, ConsoleUiOpen},
     AddAppCommand, AppCommand, QueuedCommands,
 };
 use bevy_egui::EguiPlugin;
@@ -8,7 +8,7 @@ use bevy_egui::EguiPlugin;
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, EguiPlugin))
-        .add_plugins(CommandsUiPlugins)
+        .add_plugins(CommandsEguiPlugins)
         .insert_resource(ConsoleUiOpen(true))
         .add_app_command::<RepeatCommand, _>(repeat_command)
         .run();

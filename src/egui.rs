@@ -7,9 +7,9 @@ use expedition::{egui::StyleToFormat, Message, Styleable, Color32, MessageStyle}
 
 use crate::{CommandBufInput, CommandsPlugin, InbuiltCommandsPlugin, DEFAULT_PROMPT, CommandResponse, CommandSet, Outcome};
 
-pub struct UiInputPlugin;
+pub struct EguiInputPlugin;
 
-impl Plugin for UiInputPlugin {
+impl Plugin for EguiInputPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ConsoleUiOpen(false))
             .insert_resource(ConsoleUiState::default())
@@ -20,16 +20,16 @@ impl Plugin for UiInputPlugin {
 }
 
 #[derive(Resource)]
-pub struct UiCommandSender(pub Entity);
+pub struct EguiCommandSender(pub Entity);
 
 #[derive(Component)]
-struct DefaultUiCommandSender;
+struct DefaultEguiCommandSender;
 
 fn setup_ui_sender(mut commands: Commands) {
     let sender = commands
-        .spawn((Name::new("Console UI command sender"), DefaultUiCommandSender))
+        .spawn((Name::new("Console UI command sender"), DefaultEguiCommandSender))
         .id();
-    commands.insert_resource(UiCommandSender(sender));
+    commands.insert_resource(EguiCommandSender(sender));
 }
 
 #[derive(Resource)]
@@ -69,7 +69,7 @@ fn console_ui(
     mut egui: EguiContexts,
     mut state: ResMut<ConsoleUiState>,
     mut command_input: EventWriter<CommandBufInput>,
-    sender: Res<UiCommandSender>,
+    sender: Res<EguiCommandSender>,
 ) {
     let formatter = StyleToFormat {
         font_id: FontId::monospace(14.0),
@@ -85,7 +85,7 @@ fn console_ui(
             ui.vertical(|ui| {
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
-                    .max_height(ui.available_height() - 35.0)
+                    .max_height(ui.available_height() - 30.0)
                     .stick_to_bottom(true)
                     .show(ui, |ui| {
                         for line in &state.scrollback {
@@ -121,7 +121,7 @@ fn console_ui(
 
 fn respond_default_ui(
     mut resps: EventReader<CommandResponse>,
-    sender: Query<Entity, With<DefaultUiCommandSender>>,
+    sender: Query<Entity, With<DefaultEguiCommandSender>>,
     mut ui_state: ResMut<ConsoleUiState>,
 ) {
     let Ok(sender) = sender.get_single() else {
@@ -136,13 +136,13 @@ fn respond_default_ui(
     }
 }
 
-pub struct CommandsUiPlugins;
+pub struct CommandsEguiPlugins;
 
-impl PluginGroup for CommandsUiPlugins {
+impl PluginGroup for CommandsEguiPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(CommandsPlugin)
             .add(InbuiltCommandsPlugin)
-            .add(UiInputPlugin)
+            .add(EguiInputPlugin)
     }
 }
