@@ -14,11 +14,14 @@ pub struct EguiInputPlugin;
 
 impl Plugin for EguiInputPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ConsoleUiOpen(false))
+        app.add_event::<PushConsoleUiLine>()
+            .insert_resource(ConsoleUiOpen(false))
+            .insert_resource(ConsoleUiConfig::default())
             .insert_resource(ConsoleUiState::default())
             .add_systems(Startup, setup_ui_sender)
             .add_systems(Update, (console_ui).run_if(console_ui_open))
-            .add_systems(Update, (respond_default_ui).in_set(CommandSet::Response));
+            .add_systems(Update, (respond_default_ui).in_set(CommandSet::Response))
+            .add_systems(Update, (push_console_lines).after(CommandSet::Response));
     }
 }
 
@@ -42,11 +45,25 @@ fn setup_ui_sender(mut commands: Commands) {
 pub struct ConsoleUiOpen(pub bool);
 
 #[derive(Resource)]
+pub struct ConsoleUiConfig {
+    pub error_style: MessageStyle,
+    pub scrollback_cap: usize,
+}
+
+impl Default for ConsoleUiConfig {
+    fn default() -> Self {
+        Self {
+            error_style: MessageStyle::new().color(Color32::RED),
+            scrollback_cap: 10_000,
+        }
+    }
+}
+
+#[derive(Resource)]
 pub struct ConsoleUiState {
     pub prompt: String,
-    pub scrollback: Vec<Message>,
+    scrollback: Vec<Message>,
     pub buf: String,
-    pub error_style: MessageStyle,
 }
 
 impl Default for ConsoleUiState {
@@ -55,17 +72,18 @@ impl Default for ConsoleUiState {
             prompt: DEFAULT_PROMPT.into(),
             scrollback: Vec::new(),
             buf: String::new(),
-            error_style: MessageStyle::new().color(Color32::RED),
         }
     }
 }
 
 impl ConsoleUiState {
-    pub fn push_line(&mut self, message: impl Into<Message>) {
-        // todo remove old entries
-        self.scrollback.push(message.into());
+    pub fn scrollback(&self) -> &Vec<Message> {
+        &self.scrollback
     }
 }
+
+#[derive(Event)]
+pub struct PushConsoleUiLine(pub Message);
 
 fn console_ui_open(res: Res<ConsoleUiOpen>) -> bool {
     res.0
@@ -77,6 +95,7 @@ fn console_ui(
     mut state: ResMut<ConsoleUiState>,
     mut command_input: EventWriter<CommandBufInput>,
     sender: Res<EguiCommandSender>,
+    mut push_line: EventWriter<PushConsoleUiLine>,
 ) {
     let formatter = StyleToFormat {
         font_id: FontId::monospace(14.0),
@@ -112,8 +131,7 @@ fn console_ui(
 
                 if entered {
                     let buf = state.buf.trim().to_owned();
-                    let prompt_line = format!("{}{}", state.prompt, buf);
-                    state.push_line(prompt_line);
+                    push_line.send(PushConsoleUiLine(format!("{}{}", state.prompt, buf).into()));
                     state.buf.clear();
                     if !buf.is_empty() {
                         info!("Issued console command: {}", buf);
@@ -134,17 +152,31 @@ fn console_ui(
 fn respond_default_ui(
     mut resps: EventReader<CommandResponse>,
     sender: Query<Entity, With<DefaultEguiCommandSender>>,
-    mut ui_state: ResMut<ConsoleUiState>,
+    ui_config: Res<ConsoleUiConfig>,
+    mut push_lines: EventWriter<PushConsoleUiLine>,
 ) {
     let Ok(sender) = sender.get_single() else {
         return;
     };
     for resp in resps.iter().filter(|r| r.target == sender) {
-        let error_style = ui_state.error_style;
-        ui_state.push_line(match resp.outcome {
+        push_lines.send(PushConsoleUiLine(match resp.outcome {
             Outcome::Ok => resp.message.clone(),
-            Outcome::Err => resp.message.clone().with_style(error_style),
-        });
+            Outcome::Err => resp.message.clone().with_style(ui_config.error_style),
+        }));
+    }
+}
+
+fn push_console_lines(
+    mut lines: EventReader<PushConsoleUiLine>,
+    ui_config: Res<ConsoleUiConfig>,
+    mut ui_state: ResMut<ConsoleUiState>,
+) {
+    for line in lines.iter() {
+        ui_state.scrollback.push(line.0.clone());
+    }
+    // remove old entries
+    if ui_state.scrollback.len() > ui_config.scrollback_cap {
+        ui_state.scrollback.drain(0..ui_config.scrollback_cap);
     }
 }
 
