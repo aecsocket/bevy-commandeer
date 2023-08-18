@@ -24,7 +24,5 @@ pub use crate::inbuilt::InbuiltCommandsPlugin;
 pub use crate::plugin::{
     AddAppCommand, CommandBufInput, CommandMetaMap, CommandSet, CommandsPlugin,
 };
-#[cfg(feature = "egui")]
-pub use crate::egui::{EguiInputPlugin, EguiCommandSender, ConsoleUiOpen, ConsoleUiState, CommandsEguiPlugins};
 
 pub const DEFAULT_PROMPT: &str = "> ";
