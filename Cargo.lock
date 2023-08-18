@@ -1713,9 +1713,9 @@ checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
 name = "expedition"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f696c869eb92bfaf11398ee7ef191fba1057d76be1580b9df93004f82413a82"
+checksum = "c743efc1a04bc6375daf5d95951fd82157bfc1dc8fb9589538caef107491841a"
 dependencies = [
  "ecolor",
  "egui",

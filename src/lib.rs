@@ -21,8 +21,8 @@ pub use crate::dispatch::{
 };
 #[cfg(feature = "inbuilt")]
 pub use crate::inbuilt::InbuiltCommandsPlugin;
-pub use crate::plugin::{AddAppCommand, CommandInput, CommandSet, CommandsPlugin, CommandMetaMap};
-#[cfg(feature = "stdio")]
-pub use crate::stdio::{CommandsStdioPlugins, StdioInputPlugin, StdioPrompt};
-#[cfg(feature = "ui")]
-pub use crate::ui::{CommandsUiPlugins, UiInputPlugin};
+pub use crate::plugin::{
+    AddAppCommand, CommandBufInput, CommandMetaMap, CommandSet, CommandsPlugin,
+};
+
+pub const DEFAULT_PROMPT: &str = "> ";

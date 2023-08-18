@@ -7,7 +7,9 @@ use bevy::{app::AppExit, prelude::*};
 use rustyline::{error::ReadlineError, history::MemHistory, Editor};
 
 use crate::inbuilt::InbuiltCommandsPlugin;
-use crate::{CommandInput, CommandResponse, CommandSet, CommandsPlugin, Outcome};
+use crate::{
+    CommandBufInput, CommandResponse, CommandSet, CommandsPlugin, Outcome, DEFAULT_PROMPT,
+};
 
 pub type StdioEditor = Editor<(), MemHistory>;
 
@@ -40,7 +42,7 @@ impl Plugin for StdioInputPlugin {
         let editor = self.editor.lock().unwrap().take().unwrap();
         thread::spawn(move || read_stdio(editor, tx_input, rx_prompt));
 
-        app.insert_resource(StdioPrompt("".into()))
+        app.insert_resource(StdioPrompt::default())
             .insert_non_send_resource(StdioChannels {
                 rx_input,
                 tx_prompt,
@@ -61,6 +63,12 @@ struct StdioChannels {
 
 #[derive(Resource)]
 pub struct StdioPrompt(pub String);
+
+impl Default for StdioPrompt {
+    fn default() -> Self {
+        Self(DEFAULT_PROMPT.into())
+    }
+}
 
 #[derive(Resource)]
 pub struct StdioCommandSender(pub Entity);
@@ -88,6 +96,9 @@ fn read_stdio(mut editor: StdioEditor, tx_input: Sender<StdioInput>, rx_prompt: 
         }
         match editor.readline(&prompt) {
             Ok(buf) => {
+                if let Err(e) = editor.add_history_entry(buf.clone()) {
+                    warn!("Could not add history entry to editor: {}", e);
+                }
                 if let Err(e) = tx_input.send(StdioInput::Buf(buf)) {
                     warn!("Could not send command buffer to app: {}", e);
                 }
@@ -110,23 +121,17 @@ fn read_stdio(mut editor: StdioEditor, tx_input: Sender<StdioInput>, rx_prompt: 
 
 fn receive_stdio_input(
     channels: NonSend<StdioChannels>,
-    mut command_sent: EventWriter<CommandInput>,
+    mut command_input: EventWriter<CommandBufInput>,
     mut app_exit: EventWriter<AppExit>,
     sender: Res<StdioCommandSender>,
 ) {
     for input in channels.rx_input.try_iter() {
         match input {
             StdioInput::Buf(buf) => {
-                let mut args = shlex::split(&buf).unwrap_or_default();
-                if args.is_empty() {
-                    continue;
-                }
-                let name = args.remove(0);
-                command_sent.send(CommandInput {
+                command_input.send(CommandBufInput {
                     sender: sender.0,
-                    name,
-                    args,
-                })
+                    buf,
+                });
             }
             StdioInput::Exit => app_exit.send(AppExit),
         }
@@ -144,9 +149,9 @@ fn send_stdio_prompt(channels: NonSend<StdioChannels>, prompt: Res<StdioPrompt>)
 
 fn respond_default_stdio(
     mut resps: EventReader<CommandResponse>,
-    stdio_sender: Query<Entity, With<DefaultStdioCommandSender>>,
+    sender: Query<Entity, With<DefaultStdioCommandSender>>,
 ) {
-    let Ok(sender) = stdio_sender.get_single() else {
+    let Ok(sender) = sender.get_single() else {
         return;
     };
     for resp in resps.iter().filter(|r| r.target == sender) {

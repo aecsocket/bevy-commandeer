@@ -8,7 +8,8 @@ impl Plugin for CommandsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(CommandMetaMap(HashMap::default()))
             .insert_resource(RespondToInvalidCommand(true))
-            .add_event::<CommandInput>()
+            .add_event::<CommandBufInput>()
+            .add_event::<CommandArgsInput>()
             .add_event::<CommandResponse>()
             .add_event::<InvalidCommandInput>()
             .configure_sets(
@@ -27,6 +28,7 @@ impl Plugin for CommandsPlugin {
                     CommandSet::Response.run_if(have_responses),
                 ),
             )
+            .add_systems(Update, (parse_command_bufs).before(CommandSet::Dispatch))
             .add_systems(
                 Update,
                 (mark_invalid_commands)
@@ -49,7 +51,7 @@ pub enum CommandSet {
     Response,
 }
 
-fn have_commands(cmds: EventReader<CommandInput>) -> bool {
+fn have_commands(cmds: EventReader<CommandBufInput>) -> bool {
     !cmds.is_empty()
 }
 
@@ -82,13 +84,13 @@ impl AddAppCommand for App {
         }
 
         let setup_command_meta = move |mut command_meta: ResMut<CommandMetaMap>| {
-            if let Some(_) = command_meta.0.insert(C::name(), command::<C>()) {
+            if command_meta.0.insert(C::name(), command::<C>()).is_some() {
                 warn!("Command '{}' already exists, overwriting", C::name());
             }
         };
 
         let dispatch_command =
-            move |mut input: EventReader<CommandInput>,
+            move |mut input: EventReader<CommandArgsInput>,
                   mut dispatch: EventWriter<CommandDispatch<C>>,
                   mut resps: EventWriter<CommandResponse>| {
                 for input in input.iter().filter(|input| input.name == C::name()) {
@@ -122,7 +124,13 @@ impl AddAppCommand for App {
 }
 
 #[derive(Event)]
-pub struct CommandInput {
+pub struct CommandBufInput {
+    pub sender: Entity,
+    pub buf: String,
+}
+
+#[derive(Event)]
+pub struct CommandArgsInput {
     pub sender: Entity,
     pub name: String,
     pub args: Vec<String>,
@@ -134,8 +142,26 @@ pub struct InvalidCommandInput {
     pub name: String,
 }
 
+fn parse_command_bufs(
+    mut buf_input: EventReader<CommandBufInput>,
+    mut args_input: EventWriter<CommandArgsInput>,
+) {
+    args_input.send_batch(buf_input.iter().filter_map(|input| {
+        let mut args = shlex::split(&input.buf).unwrap_or_default();
+        if args.is_empty() {
+            return None;
+        }
+        let name = args.remove(0);
+        Some(CommandArgsInput {
+            sender: input.sender,
+            name,
+            args,
+        })
+    }));
+}
+
 fn mark_invalid_commands(
-    mut input: EventReader<CommandInput>,
+    mut input: EventReader<CommandArgsInput>,
     command_meta: Res<CommandMetaMap>,
     mut invalid: EventWriter<InvalidCommandInput>,
 ) {
@@ -143,7 +169,10 @@ fn mark_invalid_commands(
         .iter()
         .filter(|input| !command_meta.0.contains_key(input.name.as_str()))
     {
-        debug!("Marking '{}' sent by {:?} as invalid", input.name, input.sender);
+        debug!(
+            "Marking '{}' sent by {:?} as invalid",
+            input.name, input.sender
+        );
         invalid.send(InvalidCommandInput {
             target: input.sender,
             name: input.name.clone(),

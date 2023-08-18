@@ -1,11 +1,10 @@
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_commands::{AddAppCommand, AppCommand, CommandsStdioPlugins, QueuedCommands, StdioPrompt};
+use bevy_commands::{stdio::CommandsStdioPlugins, AddAppCommand, AppCommand, QueuedCommands};
 
 fn main() {
     App::new()
         .add_plugins((MinimalPlugins, LogPlugin::default()))
         .add_plugins(CommandsStdioPlugins)
-        .insert_resource(StdioPrompt("> ".into()))
         .add_app_command::<RepeatCommand, _>(repeat_command)
         .add_systems(Startup, setup)
         .run();
