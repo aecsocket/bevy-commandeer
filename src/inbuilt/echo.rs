@@ -1,5 +1,5 @@
 use crate as bevy_commands;
-use crate::{AppCommand, QueuedCommands, CommandResponder};
+use crate::{AppCommand, CommandResponder, QueuedCommands};
 
 /// Displays text back to the sender.
 #[derive(clap::Parser, AppCommand)]

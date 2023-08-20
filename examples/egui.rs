@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_commands::{
     egui::{CommandsEguiPlugins, ConsoleUiOpen},
-    AddAppCommand, AppCommand, QueuedCommands, CommandResponder, respond_ok
+    respond_ok, AddAppCommand, AppCommand, CommandResponder, QueuedCommands,
 };
 use bevy_egui::EguiPlugin;
 

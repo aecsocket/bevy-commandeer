@@ -1,7 +1,7 @@
 use bevy::prelude::ResMut;
 
-use crate::{self as bevy_commands, CommandMetaMap, respond_err};
-use crate::{AppCommand, QueuedCommands, CommandResponder};
+use crate::{self as bevy_commands, respond_err, CommandMetaMap};
+use crate::{AppCommand, CommandResponder, QueuedCommands};
 
 /// Provides usage information on registered commands.
 #[derive(clap::Parser, AppCommand)]

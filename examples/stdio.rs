@@ -1,5 +1,8 @@
 use bevy::{log::LogPlugin, prelude::*};
-use bevy_commands::{stdio::CommandsStdioPlugins, AddAppCommand, AppCommand, QueuedCommands, CommandResponder, respond_ok};
+use bevy_commands::{
+    respond_ok, stdio::CommandsStdioPlugins, AddAppCommand, AppCommand, CommandResponder,
+    QueuedCommands,
+};
 
 fn main() {
     App::new()
