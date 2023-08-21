@@ -253,7 +253,9 @@ fn push_history(
     mut state: ResMut<ConsoleUiState>,
 ) {
     for event in events.iter() {
-        state.history.insert(1, event.0.clone());
+        if state.history.get(1).map(|s| *s != event.0).unwrap_or(true) {
+            state.history.insert(1, event.0.clone());
+        }
     }
     let len = state.history.len();
     let cap = config.history_cap;

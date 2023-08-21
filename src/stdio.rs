@@ -157,7 +157,7 @@ fn respond_default_stdio(
     for resp in resps.iter().filter(|r| r.target == sender) {
         match resp.outcome {
             Outcome::Ok => info!("{}", resp.message),
-            Outcome::Err => warn!("{}", resp.message),
+            Outcome::Err => error!("{}", resp.message),
         }
     }
 }
